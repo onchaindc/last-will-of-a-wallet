@@ -15,6 +15,7 @@ const files: [string, Mode][] = [
 for (const [name, mode] of files) {
   const html = renderToHtml(<Will d={sample} mode={mode} />);
   writeFileSync(`out/${name}.html`, html);
+  if (mode === "web") writeFileSync("out/index.html", html); // served at / when deployed
   console.log(`out/${name}.html  ${(html.length / 1024).toFixed(1)} KB`);
 }
 writeFileSync("out/design.json", JSON.stringify(renderToJson(<Will d={sample} mode="web" />), null, 2));
