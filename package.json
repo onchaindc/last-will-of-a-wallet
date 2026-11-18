@@ -1,0 +1,24 @@
+{
+  "name": "last-will-of-a-wallet",
+  "version": "1.0.0",
+  "description": "A crypto inheritance kit built with Hyper Elements: a printable letter of instruction (PDF), a calm walkthrough page for heirs, a check-in email and an heir notice email, all from one validated data object.",
+  "type": "module",
+  "scripts": {
+    "test": "tsx test/validate.test.ts",
+    "build": "tsx src/build.tsx",
+    "pdf": "tsx src/pdf.ts",
+    "all": "npm test && npm run build && npm run pdf"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@unlayer/react-elements": "^0.2.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "playwright": "^1.50.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}
