@@ -1,45 +1,38 @@
 import { defineTheme } from "@hyper-elements/react";
 
-// The Wrapped look, defined once. Every Email, Page, Document and Canvas takes this theme.
-export const FONT = {
-  display: "'Archivo Black', 'Arial Black', Impact, 'Helvetica Neue', Arial, sans-serif",
-  body: "'Source Serif 4', Georgia, 'Times New Roman', serif",
-};
+// The notary look, defined once. Every Email, Page and Document takes this theme.
+export const FONT = { serif: "'Source Serif 4', Georgia, 'Times New Roman', serif" };
 
 export const theme = defineTheme({
   colors: {
-    background: "#FFF6E5",
-    foreground: "#1E1147",
-    primary: "#1E1147", // ink
-    primaryForeground: "#FFF6E5",
-    flamingo: "#FF5C8A",
-    mint: "#9BF0C8",
-    sun: "#FFD43B",
-    paper: "#FFF6E5",
+    background: "#FFFFFF",
+    foreground: "#2B3445",
+    primary: "#14213D", // navy
+    primaryForeground: "#F4F1EA",
+    seal: "#B3261E", // wax-seal red
+    mist: "#E8EDF4",
+    muted: "#5B6676",
+    border: "#C9D1DE",
   },
-  fonts: { body: FONT.body },
-  fontSizes: { body: 18 },
-  lineHeights: { body: 1.5 },
+  fonts: { body: FONT.serif },
+  fontSizes: { body: 17 },
+  lineHeights: { body: 1.6 },
   elements: {
-    Button: {
-      backgroundColor: "{colors.primary}",
-      color: "{colors.primaryForeground}",
-      borderRadius: 999,
-      fontFamily: FONT.display,
-      fontSize: 16,
-      padding: "16px 30px",
+    Heading: {
+      fontWeight: 700,
+      color: "{colors.primary}",
+      by: { level: { 1: { fontSize: 46, lineHeight: 1.1 }, 2: { fontSize: 28, lineHeight: 1.2 }, 3: { fontSize: 20, lineHeight: 1.3 } } },
     },
-    Heading: { fontFamily: FONT.display, fontWeight: 400, color: "{colors.primary}", lineHeight: 1.02 },
+    Button: { backgroundColor: "{colors.seal}", color: "#FFFFFF", borderRadius: 4, fontFamily: FONT.serif, fontWeight: 700, fontSize: 18, padding: "16px 30px" },
   },
   styles: {
-    display: { fontFamily: FONT.display, fontWeight: 400, lineHeight: 1 },
-    kicker: { fontFamily: FONT.body, fontSize: 15, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" },
+    kicker: { fontSize: 14, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: "{colors.muted}" },
+    small: { fontSize: 14, lineHeight: 1.5, color: "{colors.muted}" },
   },
 });
 
 export type FontFaceDef = { family: string; src: string; format: "woff"; weight: number; style?: "normal" | "italic" };
 export const fontFiles = [
-  { family: "Archivo Black", file: "archivo-black-latin-400-normal.woff", weight: 400, style: "normal" as const },
   { family: "Source Serif 4", file: "source-serif-4-latin-400-normal.woff", weight: 400, style: "normal" as const },
   { family: "Source Serif 4", file: "source-serif-4-latin-700-normal.woff", weight: 700, style: "normal" as const },
 ];
