@@ -21,7 +21,6 @@
     "satori": "^0.33.5"
   },
   "devDependencies": {
-    "@fontsource/archivo-black": "^5.2.5",
     "@fontsource/source-serif-4": "^5.3.1",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.0",
