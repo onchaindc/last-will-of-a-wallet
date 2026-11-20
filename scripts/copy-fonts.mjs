@@ -4,7 +4,6 @@ import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 const files = [
-  ["archivo-black", "archivo-black-latin-400-normal.woff"],
   ["source-serif-4", "source-serif-4-latin-400-normal.woff"],
   ["source-serif-4", "source-serif-4-latin-700-normal.woff"],
 ];
