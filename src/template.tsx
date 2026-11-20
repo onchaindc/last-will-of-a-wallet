@@ -1,238 +1,202 @@
 import type { ReactNode } from "react";
 import {
-  Email, Page, Document, Row, Column, ColumnLayouts,
-  Heading, Paragraph, Button, Table, Divider, PageBreak,
-} from "@unlayer/react-elements";
-import { WillData, fmtDate } from "./data";
+  Button, Canvas, Column, Document, Email, Heading, Page, Section, Span, Table, TableCell, TableRow, Text, token,
+} from "@hyper-elements/react";
+import { WalletYear, pickPersona } from "./data";
+import { fontFaces, theme } from "./theme";
 
-export type Mode = "checkin" | "heir" | "web" | "document";
+export type Kind = "email" | "page" | "doc";
+const n = (x: number) => x.toLocaleString("en-US");
+const ink = token("colors.primary");
+const paper = token("colors.paper");
+type Bg = "primary" | "flamingo" | "mint" | "sun" | "paper";
+const bg = (b: Bg) => token(`colors.${b}` as "colors.primary");
+const fgOn = (b: Bg) => (b === "primary" ? paper : ink);
 
-const C = {
-  navy: "#14213D",
-  seal: "#B3261E",
-  mist: "#E8EDF4",
-  paper: "#FFFFFF",
-  slate: "#2B3445",
-  brass: "#A8793A",
-};
-const serif = { label: "Georgia", value: "Georgia, 'Times New Roman', serif" };
-const mono = { label: "Courier New", value: "'Courier New', Courier, monospace" };
-
-type Tone = "navy" | "paper" | "mist" | "seal";
-const tone: Record<Tone, { bg: string; fg: string }> = {
-  navy: { bg: C.navy, fg: "#F4F1EA" },
-  paper: { bg: C.paper, fg: C.slate },
-  mist: { bg: C.mist, fg: C.slate },
-  seal: { bg: C.seal, fg: "#FFFFFF" },
-};
-
-function Block({ t, mode, children }: { t: Tone; mode: Mode; children: ReactNode }) {
-  const v = mode === "document" ? 30 : 40;
-  const h = mode === "document" ? 56 : 28;
-  return (
-    <Row layout={ColumnLayouts.OneColumn} backgroundColor={tone[t].bg} padding={`${v}px 0px`}>
-      <Column padding={`0px ${h}px`}>{children}</Column>
-    </Row>
-  );
+// One color block of the story. A Section in an email or page, a full-bleed page in the PDF.
+function Slide({ tone, kind, children }: { tone: Bg; kind: Kind; children: ReactNode }) {
+  if (kind === "doc")
+    return (
+      <Document.Page style={{ backgroundColor: bg(tone) }}>
+        <Column style={{ padding: [130, 0, 0, 0], gap: 18 }}>{children}</Column>
+      </Document.Page>
+    );
+  return <Section style={{ backgroundColor: bg(tone), padding: [58, 28], gap: 14 }}>{children}</Section>;
 }
 
-const H = ({ t, size = 34, children }: { t: Tone; size?: number; children: ReactNode }) => (
-  <Heading headingType="h2" fontSize={`${size}px`} lineHeight={1.2} fontWeight={700} fontFamily={serif} color={tone[t].fg}>
-    {children}
-  </Heading>
+// Phone styles only exist for an Email or a Page, so a PDF page gets none.
+const phone = (kind: Kind, size: number) => (kind === "doc" ? {} : { mobile: { fontSize: size } });
+// Email clients can't load web fonts. If Arial Black is missing, a bold weight keeps the fallback heavy.
+const heavy = (kind: Kind) => (kind === "email" ? { fontWeight: 800 as const } : {});
+const Stat = ({ tone, size, kind, children }: { tone: Bg; size: number; kind: Kind; children: ReactNode }) => (
+  <Text style={{ apply: ["display"], fontSize: size, color: fgOn(tone), ...heavy(kind), ...phone(kind, Math.round(size * 0.68)) }}>{children}</Text>
 );
-const P = ({ t, html, size = 17 }: { t: Tone; html: string; size?: number }) => (
-  <Paragraph html={html} fontSize={`${size}px`} lineHeight={1.6} fontFamily={serif} color={tone[t].fg} />
+const Say = ({ tone, size = 20, children }: { tone: Bg; size?: number; children: ReactNode }) => (
+  <Text style={{ fontSize: size, lineHeight: 1.5, color: fgOn(tone) }}>{children}</Text>
 );
-const Rule = ({ color = C.seal }: { color?: string }) => <Divider borderTopColor={color} borderTopWidth="3px" />;
+const B = ({ children }: { children: ReactNode }) => <Span style={{ fontWeight: 700 }}>{children}</Span>;
 
-const tableStyle = {
-  headerBackgroundColor: C.navy,
-  headerColor: "#FFFFFF",
-  headerFontFamily: serif,
-  headerFontSize: "14px" as const,
-  contentFontFamily: serif,
-  contentFontSize: "14px" as const,
-  contentColor: C.slate,
-  contentPadding: "10px 12px" as const,
-  headerPadding: "10px 12px" as const,
-  stripedRows: true,
-  stripedRowsBackgroundColor: C.mist,
-};
+function Sections({ d, kind }: { d: WalletYear; kind: Kind }) {
+  const persona = pickPersona(d);
+  const perDay = (d.txCount / 365).toFixed(2);
+  const survived = d.aped - d.rugged;
+  const survival = Math.round((survived / d.aped) * 100);
+  const top = d.chains[0];
+  const full = kind !== "email";
+  const doc = kind === "doc";
 
-// ---------- sections ----------
-function Cover({ d, mode }: { d: WillData; mode: Mode }) {
-  return (
-    <Block t="navy" mode={mode}>
-      <P t="navy" size={14} html="Letter of instruction for digital assets" />
-      <Heading headingType="h1" fontSize="46px" lineHeight={1.1} fontWeight={700} fontFamily={serif} color={tone.navy.fg}>
-        The Last Will of a Wallet
-      </Heading>
-      <Rule />
-      <P t="navy" html={`Prepared by <b>${d.owner.name}</b> on ${fmtDate(d.preparedOn)}. For ${d.heirs.map((h) => h.name).join(", ")}.`} />
-    </Block>
-  );
-}
-
-function Note({ d, mode }: { d: WillData; mode: Mode }) {
-  return (
-    <Block t="paper" mode={mode}>
-      <H t="paper" size={28}>A note first</H>
-      <P t="paper" size={19} html={d.note} />
-      <P t="paper" size={15} html={`${d.owner.name}`} />
-    </Block>
-  );
-}
-
-function Steps({ d, mode, count }: { d: WillData; mode: Mode; count?: number }) {
-  const steps = d.steps.slice(0, count ?? d.steps.length);
-  return (
-    <Block t="mist" mode={mode}>
-      <H t="mist" size={30}>What to do, in this order</H>
-      {steps.map((s, i) => (
-        <div key={s.title}>
-          <Heading headingType="h3" fontSize="20px" fontWeight={700} fontFamily={serif} color={C.navy}>
-            {`${i + 1}. ${s.title}`}
-          </Heading>
-          <P t="mist" size={16} html={s.body} />
-        </div>
-      ))}
-    </Block>
-  );
-}
-
-function Scam({ mode }: { mode: Mode }) {
-  return (
-    <Block t="seal" mode={mode}>
-      <H t="seal" size={26}>Nobody legitimate will ever ask for the recovery phrase</H>
-      <P t="seal" size={16} html="Not a support agent, not an exchange, not a lawyer, not a friend of the family. If someone asks, stop and call the executor." />
-    </Block>
-  );
-}
-
-function Register({ d, mode, withRecovery }: { d: WillData; mode: Mode; withRecovery: boolean }) {
-  const headers = withRecovery ? ["Asset", "Chain", "Address", "Where the recovery material is kept"] : ["Asset", "Type", "Chain", "Address"];
-  const data = d.assets.map((a) =>
-    withRecovery ? [a.label, a.chain, a.address, a.recovery] : [a.label, a.kind, a.chain, a.address],
-  );
-  return (
-    <Block t="paper" mode={mode}>
-      <H t="paper" size={28}>What there is</H>
-      <P t="paper" size={15} html={withRecovery ? "This list says <b>where</b> things are kept. It never contains the recovery material itself." : "Storage locations are only in the printed letter, never on this page."} />
-      <Table headers={headers} data={data} {...tableStyle} />
-    </Block>
-  );
-}
-
-function Shares({ d, mode }: { d: WillData; mode: Mode }) {
-  return (
-    <Block t="paper" mode={mode}>
-      <H t="paper" size={28}>Who it goes to</H>
-      <Table
-        headers={["Name", "Relationship", "Share", "Contact"]}
-        data={d.heirs.map((h) => [h.name, h.relationship, `${h.sharePct}%`, h.email])}
-        {...tableStyle}
-      />
-      <P t="paper" size={15} html={`Executor: <b>${d.executor.name}</b>, ${d.executor.role} (${d.executor.email}).`} />
-    </Block>
-  );
-}
-
-function Signatures({ d, mode }: { d: WillData; mode: Mode }) {
-  return (
-    <Block t="paper" mode={mode}>
-      <H t="paper" size={28}>Signatures</H>
-      <P t="paper" size={15} html="Sign in front of two witnesses. Rules for witnesses and notaries differ by place, so check yours." />
-      <P t="paper" size={16} html={`Signed: ______________________________ &nbsp; Date: ______________<br/>${d.owner.name}`} />
-      <P t="paper" size={16} html="Witness 1: ______________________________ &nbsp; Date: ______________" />
-      <P t="paper" size={16} html="Witness 2: ______________________________ &nbsp; Date: ______________" />
-      <Rule color={C.navy} />
-      <Paragraph fontFamily={serif} fontSize="12px" lineHeight={1.5} color="#555555">
-        This is a letter of instruction, not a legal will or financial advice. It does not transfer ownership by itself. Ask an estate lawyer how your local law treats digital assets. Never write a recovery phrase, private key or password in this document.
-      </Paragraph>
-    </Block>
-  );
-}
-
-function CheckinBody({ d, mode }: { d: WillData; mode: Mode }) {
-  const due = fmtDate(d.lastCheckIn, d.checkinDays);
-  const send = fmtDate(d.lastCheckIn, d.checkinDays + d.graceDays);
   return (
     <>
-      <Block t="navy" mode={mode}>
-        <H t="navy" size={38}>{`${d.owner.name.split(" ")[0]}, are you still there?`}</H>
-        <P t="navy" html={`This is your ${d.checkinDays} day check-in. One tap resets the timer.`} />
-      </Block>
-      <Block t="paper" mode={mode}>
-        <Button href={d.checkinUrl} backgroundColor={C.seal} color="#FFFFFF" fontFamily={serif} fontSize="18px" fontWeight={700} padding="16px 30px" borderRadius="4px">
-          {"I'm okay, reset my timer"}
-        </Button>
-        <P t="paper" size={15} html={`Your check-in is due <b>${due}</b>. If nothing happens, we wait ${d.graceDays} more days, then on <b>${send}</b> we send your letter to ${d.heirs.length} people: ${d.heirs.map((h) => h.name).join(", ")}.`} />
-        <P t="paper" size={13} html="Not you, or want to change who gets the letter? Update your list before the due date." />
-      </Block>
+      <Slide tone="primary" kind={kind}>
+        <Say tone="primary" size={15}>{d.handle} · {d.address}</Say>
+        <Heading level={1} style={{ fontSize: 64, color: paper, ...heavy(kind), ...phone(kind, 44) }}>Your {d.year}, onchain.</Heading>
+        <Say tone="primary">Every swap, bridge and 3 AM decision, counted.{doc ? "" : " Scroll to see what you did."}</Say>
+      </Slide>
+
+      <Slide tone="flamingo" kind={kind}>
+        <Stat kind={kind} tone="flamingo" size={118}>{n(d.txCount)}</Stat>
+        <Say tone="flamingo" size={24}>
+          transactions signed. That is <B>{perDay}</B> a day. Your wallet did not take a single holiday.
+        </Say>
+      </Slide>
+
+      {full && (
+        <Slide tone="mint" kind={kind}>
+          <Stat kind={kind} tone="mint" size={56}>{top.name} was home.</Stat>
+          <Say tone="mint">
+            {Math.round((top.txs / d.txCount) * 100)}% of your activity lived there. You still visited {d.chains.length - 1} other chains, mostly for airdrops.
+          </Say>
+          <Table style={{ width: "100%", cellPadding: [10, 12, 10, 0], rowBorder: { width: 1, style: "solid", color: ink }, borderCollapse: "collapse" }}>
+            <TableRow header>
+              <TableCell>Chain</TableCell>
+              <TableCell>Txs</TableCell>
+              <TableCell>Share</TableCell>
+            </TableRow>
+            {d.chains.map((c) => (
+              <TableRow key={c.name}>
+                <TableCell>{c.name}</TableCell>
+                <TableCell>{n(c.txs)}</TableCell>
+                <TableCell>{Math.round((c.txs / d.txCount) * 100)}%</TableCell>
+              </TableRow>
+            ))}
+          </Table>
+        </Slide>
+      )}
+
+      <Slide tone="sun" kind={kind}>
+        <Stat kind={kind} tone="sun" size={100}>{d.aped} apes.</Stat>
+        <Say tone="sun" size={24}>
+          <B>{d.rugged}</B> rugged. <B>{survived}</B> survived. That is a <B>{survival}%</B> survival rate, better than most of the people reading this.
+        </Say>
+      </Slide>
+
+      {full && (
+        <Slide tone="primary" kind={kind}>
+          <Stat kind={kind} tone="primary" size={76}>{d.nightOwlHour}</Stat>
+          <Say tone="primary">was your most common signing time. Nothing good has ever been approved at that hour, and yet.</Say>
+          {doc ? (
+            <>
+              <Stat kind={kind} tone="primary" size={76}>${n(d.feesUsd)}</Stat>
+              <Say tone="primary">in fees. Your longest hold lasted <B>{d.longestHoldDays} days</B>, so the fees were the only thing moving.</Say>
+            </>
+          ) : null}
+        </Slide>
+      )}
+
+      {full && !doc && (
+        <Slide tone="flamingo" kind={kind}>
+          <Stat kind={kind} tone="flamingo" size={84}>${n(d.feesUsd)}</Stat>
+          <Say tone="flamingo">in fees. Your longest hold lasted <B>{d.longestHoldDays} days</B>, so the fees were the only thing moving.</Say>
+        </Slide>
+      )}
+
+      <Slide tone="paper" kind={kind}>
+        <Text style={{ apply: ["kicker"], color: ink }}>Your onchain personality</Text>
+        <Heading level={2} style={{ fontSize: 54, ...heavy(kind), ...phone(kind, 38) }}>{persona.name}</Heading>
+        <Say tone="paper">{persona.blurb}</Say>
+        {kind === "email" ? <Button href={d.shareUrl}>See your full Wrapped</Button> : null}
+        {doc ? (
+          <>
+            <Text style={{ apply: ["kicker"], color: ink, padding: [28, 0, 0, 0] }}>The receipts</Text>
+            <Table style={{ width: "100%", cellPadding: [9, 10, 9, 0], rowBorder: { width: 1, style: "solid", color: ink }, borderCollapse: "collapse" }}>
+              <TableRow header>
+                <TableCell style={{ width: 80 }}>Date</TableCell>
+                <TableCell>Moment</TableCell>
+                <TableCell style={{ width: 100 }}>Amount</TableCell>
+              </TableRow>
+              {d.moments.map((m) => (
+                <TableRow key={m.date}>
+                  <TableCell>{m.date}</TableCell>
+                  <TableCell>{m.moment}</TableCell>
+                  <TableCell>{m.amount}</TableCell>
+                </TableRow>
+              ))}
+            </Table>
+            <Text style={{ fontSize: 12, color: token("colors.foreground") }}>Onchain Wrapped is a novelty summary, not financial or tax advice. Sample data for a fictional wallet.</Text>
+          </>
+        ) : null}
+      </Slide>
+
+      {kind === "page" ? (
+        <Slide tone="primary" kind={kind}>
+          <Say tone="primary">Share yours with #OnchainWrapped</Say>
+          <Button href={d.shareUrl} style={{ backgroundColor: token("colors.sun"), color: ink }}>Copy my Wrapped link</Button>
+        </Slide>
+      ) : null}
     </>
   );
 }
 
-function HeirBody({ d, mode, recipient }: { d: WillData; mode: Mode; recipient: string }) {
+// ---------- the four roots, one data object ----------
+export function WrappedEmail({ d }: { d: WalletYear }) {
   return (
-    <>
-      <Block t="navy" mode={mode}>
-        <H t="navy" size={36}>{`A letter from ${d.owner.name}`}</H>
-        <P t="navy" html={`Dear ${recipient}, ${d.owner.name.split(" ")[0]} asked us to send you this if they stopped checking in. We are so sorry. You do not need to do anything today.`} />
-      </Block>
-      <Steps d={d} mode={mode} count={3} />
-      <Block t="paper" mode={mode}>
-        <Button href={d.letterUrl} backgroundColor={C.navy} color="#FFFFFF" fontFamily={serif} fontSize="17px" fontWeight={700} padding="15px 28px" borderRadius="4px">
-          Read the full letter
-        </Button>
-      </Block>
-      <Scam mode={mode} />
-    </>
+    <Email theme={theme} width={600} title={`Your ${d.year} onchain Wrapped`} previewText={`${d.txCount} transactions. ${d.aped} apes. Your ${d.year} Wrapped is ready.`} lang="en" style={{ gap: 0 }}>
+      <Sections d={d} kind="email" />
+    </Email>
   );
 }
 
-export function Will({ d, mode, recipient }: { d: WillData; mode: Mode; recipient?: string }) {
-  const common = { backgroundColor: C.mist, contentWidth: "680px" as const, fontFamily: serif, textColor: C.slate };
-  if (mode === "checkin")
-    return (
-      <Email {...common} previewText={`Tap once to reset your ${d.checkinDays} day timer.`}>
-        <CheckinBody d={d} mode={mode} />
-      </Email>
-    );
-  if (mode === "heir")
-    return (
-      <Email {...common} previewText={`A letter from ${d.owner.name}. Nothing needs to be done today.`}>
-        <HeirBody d={d} mode={mode} recipient={recipient ?? d.heirs[0].name.split(" ")[0]} />
-      </Email>
-    );
-  if (mode === "web")
-    return (
-      <Page {...common}>
-        <Cover d={d} mode={mode} />
-        <Block t="paper" mode={mode}>
-          <H t="paper" size={32}>Take a breath.</H>
-          <P t="paper" size={19} html="There is no deadline on this page. Read it slowly, and do the steps with the executor beside you." />
-        </Block>
-        <Note d={d} mode={mode} />
-        <Steps d={d} mode={mode} />
-        <Scam mode={mode} />
-        <Register d={d} mode={mode} withRecovery={false} />
-        <Shares d={d} mode={mode} />
-      </Page>
-    );
+export function WrappedPage({ d, origin }: { d: WalletYear; origin: string }) {
   return (
-    <Document {...common} backgroundColor="#FFFFFF" documentSize="Letter" documentOrientation="portrait">
-      <Cover d={d} mode={mode} />
-      <Note d={d} mode={mode} />
-      <Row layout={ColumnLayouts.OneColumn} padding="0px"><Column><PageBreak /></Column></Row>
-      <Steps d={d} mode={mode} />
-      <Scam mode={mode} />
-      <Row layout={ColumnLayouts.OneColumn} padding="0px"><Column><PageBreak /></Column></Row>
-      <Register d={d} mode={mode} withRecovery />
-      <Shares d={d} mode={mode} />
-      <Row layout={ColumnLayouts.OneColumn} padding="0px"><Column><PageBreak /></Column></Row>
-      <Signatures d={d} mode={mode} />
+    <Page theme={theme} width={680} title={`${d.handle} · Onchain Wrapped ${d.year}`} description={`${d.txCount} transactions, ${d.aped} apes. A year onchain.`} lang="en" fonts={fontFaces(origin)} style={{ gap: 0 }}>
+      <Sections d={d} kind="page" />
+    </Page>
+  );
+}
+
+export function WrappedDocument({ d, origin }: { d: WalletYear; origin: string }) {
+  return (
+    <Document theme={theme} size="Letter" margin={{ top: 56, right: 64, bottom: 56, left: 64 }} title={`Onchain Wrapped ${d.year} · ${d.handle}`} lang="en" fonts={fontFaces(origin)} style={{ fontSize: 18 }}>
+      <Sections d={d} kind="doc" />
     </Document>
+  );
+}
+
+export function WrappedCard({ d, origin }: { d: WalletYear; origin: string }) {
+  const persona = pickPersona(d);
+  const survived = d.aped - d.rugged;
+  const top = d.chains[0];
+  const Block = ({ tone, height, children }: { tone: Bg; height: number; children: ReactNode }) => (
+    <Column style={{ height, backgroundColor: bg(tone), padding: [44, 72], gap: 10 }}>{children}</Column>
+  );
+  return (
+    <Canvas theme={theme} width={1080} height={1350} title={`Onchain Wrapped ${d.year}`} lang="en" fonts={fontFaces(origin)} style={{ backgroundColor: ink }}>
+      <Block tone="primary" height={225}>
+        <Text style={{ fontSize: 30, color: paper }}>{d.handle} · {d.address}</Text>
+        <Heading level={1} style={{ fontSize: 84, color: paper }}>Your {d.year}, onchain.</Heading>
+      </Block>
+      <Block tone="flamingo" height={473}>
+        <Text style={{ apply: ["display"], fontSize: 230, color: ink }}>{n(d.txCount)}</Text>
+        <Text style={{ fontSize: 38, color: ink }}>transactions signed. {top.name} was home.</Text>
+      </Block>
+      <Block tone="sun" height={360}>
+        <Text style={{ apply: ["display"], fontSize: 150, color: ink }}>{d.aped} apes.</Text>
+        <Text style={{ fontSize: 38, color: ink }}>{d.rugged} rugged, {survived} survived. ${n(d.feesUsd)} in fees.</Text>
+      </Block>
+      <Block tone="paper" height={292}>
+        <Text style={{ fontSize: 28, color: ink }}>My onchain personality</Text>
+        <Heading level={2} fit={{ sizes: [76, 68, 60, 52], maxLines: 2 }} style={{ color: ink }}>{persona.name}</Heading>
+      </Block>
+    </Canvas>
   );
 }
